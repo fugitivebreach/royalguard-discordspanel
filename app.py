@@ -232,36 +232,58 @@ def dashboard():
 
 @app.route('/api/servers')
 def api_servers():
-    if 'user' not in session or 'access_token' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    # Get user's current guilds
-    user_guilds = discord_oauth.get_user_guilds(session['access_token'])
-    if user_guilds is None:
-        return jsonify({'error': 'Failed to fetch user guilds'}), 500
-    
-    user_guild_ids = [guild['id'] for guild in user_guilds]
-    
-    # Get available servers from config and fetch invite codes dynamically
-    available_servers = []
-    for server in config.get('servers', []):
-        # Fetch invite code if not already cached
-        invite_code = server.get('invite_code')
-        if not invite_code:
-            invite_code = get_server_invite(server['id'])
-            if not invite_code:
-                invite_code = "unavailable"
+    try:
+        if 'user' not in session or 'access_token' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
         
-        available_servers.append({
-            'id': server['id'],
-            'name': server['name'],
-            'icon': server.get('icon'),
-            'member_count': 'Unknown',
-            'joined': server['id'] in user_guild_ids,
-            'invite_code': invite_code
-        })
+        # Get user's current guilds
+        user_guilds = discord_oauth.get_user_guilds(session['access_token'])
+        if user_guilds is None:
+            print("Failed to fetch user guilds")
+            return jsonify({'error': 'Failed to fetch user guilds'}), 500
+        
+        user_guild_ids = [guild['id'] for guild in user_guilds]
+        
+        # Get available servers from config and fetch invite codes dynamically
+        available_servers = []
+        for server in config.get('servers', []):
+            try:
+                # Fetch invite code if not already cached
+                invite_code = server.get('invite_code')
+                if not invite_code:
+                    print(f"Attempting to get invite for server {server['id']}")
+                    invite_code = get_server_invite(server['id'])
+                    if not invite_code:
+                        print(f"Failed to get invite for server {server['id']}")
+                        invite_code = "unavailable"
+                    else:
+                        print(f"Successfully got invite for server {server['id']}: {invite_code}")
+                
+                available_servers.append({
+                    'id': server['id'],
+                    'name': server['name'],
+                    'icon': server.get('icon'),
+                    'member_count': 'Unknown',
+                    'joined': server['id'] in user_guild_ids,
+                    'invite_code': invite_code
+                })
+            except Exception as e:
+                print(f"Error processing server {server['id']}: {e}")
+                # Continue with other servers even if one fails
+                available_servers.append({
+                    'id': server['id'],
+                    'name': server['name'],
+                    'icon': server.get('icon'),
+                    'member_count': 'Unknown',
+                    'joined': server['id'] in user_guild_ids,
+                    'invite_code': "error"
+                })
+        
+        return jsonify({'servers': available_servers})
     
-    return jsonify({'servers': available_servers})
+    except Exception as e:
+        print(f"Error in api_servers: {e}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @app.route('/api/join-server', methods=['POST'])
 def api_join_server():
