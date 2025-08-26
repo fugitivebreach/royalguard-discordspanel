@@ -1,51 +1,113 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-import requests
-import json
 import os
-from urllib.parse import urlencode
+import json
+import requests
 import secrets
+from urllib.parse import urlencode
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv()
+load_dotenv('.env')
 
 app = Flask(__name__)
+app.secret_key = os.getenv('WEB_SECRET_KEY', 'fallback-secret-key')
 
-# Load configuration from environment variables
+# Discord OAuth2 configuration
+DISCORD_CLIENT_ID = os.getenv('DISCORD_CLIENT_ID')
+DISCORD_CLIENT_SECRET = os.getenv('DISCORD_CLIENT_SECRET')
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
+REDIRECT_URI = os.getenv('REDIRECT_URI')
+
+# Server configuration
+SERVER_IDS = os.getenv('SERVER_IDS', '').split(',')
+SERVER_NAMES = os.getenv('SERVER_NAMES', '').split(',')
+
+def get_server_invite(server_id):
+    """Get an invite code for a server using Discord API"""
+    headers = {
+        'Authorization': f'Bot {DISCORD_BOT_TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    try:
+        # Get server channels
+        channels_response = requests.get(
+            f'https://discord.com/api/v10/guilds/{server_id}/channels',
+            headers=headers
+        )
+        
+        if channels_response.status_code != 200:
+            print(f"Failed to get channels for server {server_id}: {channels_response.status_code}")
+            return None
+            
+        channels = channels_response.json()
+        
+        # Find a text channel (type 0)
+        text_channel = None
+        for channel in channels:
+            if channel.get('type') == 0:  # Text channel
+                text_channel = channel
+                break
+        
+        if not text_channel:
+            print(f"No text channels found in server {server_id}")
+            return None
+        
+        # Create invite for the text channel
+        invite_data = {
+            'max_age': 0,  # Never expires
+            'max_uses': 0,  # Unlimited uses
+            'temporary': False,
+            'unique': False
+        }
+        
+        invite_response = requests.post(
+            f'https://discord.com/api/v10/channels/{text_channel["id"]}/invites',
+            headers=headers,
+            json=invite_data
+        )
+        
+        if invite_response.status_code == 200:
+            invite = invite_response.json()
+            return invite.get('code')
+        else:
+            print(f"Failed to create invite for server {server_id}: {invite_response.status_code}")
+            return None
+            
+    except Exception as e:
+        print(f"Error getting invite for server {server_id}: {e}")
+        return None
+
+# Build servers list with dynamic invite codes
+SERVERS = []
+for i in range(len(SERVER_IDS)):
+    server_id = SERVER_IDS[i].strip()
+    server_name = SERVER_NAMES[i].strip() if i < len(SERVER_NAMES) else f"Server {server_id}"
+    
+    # Get invite code dynamically
+    invite_code = get_server_invite(server_id)
+    if not invite_code:
+        invite_code = "unavailable"
+    
+    SERVERS.append({
+        'id': server_id,
+        'name': server_name,
+        'invite_code': invite_code
+    })
+
+# Create config structure for compatibility
 config = {
     'discord': {
-        'client_id': os.getenv('DISCORD_CLIENT_ID'),
-        'client_secret': os.getenv('DISCORD_CLIENT_SECRET'),
-        'bot_token': os.getenv('DISCORD_BOT_TOKEN'),
-        'redirect_uri': os.getenv('REDIRECT_URI', 'http://localhost:5000/callback')
+        'client_id': DISCORD_CLIENT_ID,
+        'client_secret': DISCORD_CLIENT_SECRET,
+        'bot_token': DISCORD_BOT_TOKEN,
+        'redirect_uri': REDIRECT_URI
     },
     'web': {
-        'secret_key': os.getenv('WEB_SECRET_KEY', 'dev-secret-key'),
-        'port': int(os.getenv('PORT', 5000)),
-        'url': os.getenv('WEB_URL', 'http://localhost:5000')
-    }
+        'port': int(os.getenv('PORT', 5000))
+    },
+    'servers': SERVERS
 }
-
-# Parse server configuration from environment variables
-def load_servers_from_env():
-    server_ids = os.getenv('SERVER_IDS', '').split(',')
-    server_names = os.getenv('SERVER_NAMES', '').split(',')
-    server_invite_codes = os.getenv('SERVER_INVITE_CODES', '').split(',')
-    
-    servers = []
-    for i, server_id in enumerate(server_ids):
-        if server_id.strip():
-            servers.append({
-                'id': server_id.strip(),
-                'name': server_names[i].strip() if i < len(server_names) else f'Server {i+1}',
-                'icon': None,
-                'invite_code': server_invite_codes[i].strip() if i < len(server_invite_codes) else None
-            })
-    return servers
-
-config['servers'] = load_servers_from_env()
-
-app.secret_key = config['web']['secret_key']
 
 # Discord OAuth2 URLs
 DISCORD_API_BASE = 'https://discord.com/api/v10'
