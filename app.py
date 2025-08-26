@@ -78,22 +78,18 @@ def get_server_invite(server_id):
         print(f"Error getting invite for server {server_id}: {e}")
         return None
 
-# Build servers list with dynamic invite codes
+# Build servers list - defer invite fetching to avoid startup crashes
 SERVERS = []
 for i in range(len(SERVER_IDS)):
     server_id = SERVER_IDS[i].strip()
-    server_name = SERVER_NAMES[i].strip() if i < len(SERVER_NAMES) else f"Server {server_id}"
-    
-    # Get invite code dynamically
-    invite_code = get_server_invite(server_id)
-    if not invite_code:
-        invite_code = "unavailable"
-    
-    SERVERS.append({
-        'id': server_id,
-        'name': server_name,
-        'invite_code': invite_code
-    })
+    if server_id:  # Only add non-empty server IDs
+        server_name = SERVER_NAMES[i].strip() if i < len(SERVER_NAMES) else f"Server {server_id}"
+        
+        SERVERS.append({
+            'id': server_id,
+            'name': server_name,
+            'invite_code': None  # Will be fetched when needed
+        })
 
 # Create config structure for compatibility
 config = {
@@ -246,16 +242,23 @@ def api_servers():
     
     user_guild_ids = [guild['id'] for guild in user_guilds]
     
-    # Get available servers from config
+    # Get available servers from config and fetch invite codes dynamically
     available_servers = []
     for server in config.get('servers', []):
+        # Fetch invite code if not already cached
+        invite_code = server.get('invite_code')
+        if not invite_code:
+            invite_code = get_server_invite(server['id'])
+            if not invite_code:
+                invite_code = "unavailable"
+        
         available_servers.append({
             'id': server['id'],
             'name': server['name'],
             'icon': server.get('icon'),
             'member_count': 'Unknown',
             'joined': server['id'] in user_guild_ids,
-            'invite_code': server.get('invite_code')
+            'invite_code': invite_code
         })
     
     return jsonify({'servers': available_servers})
@@ -290,4 +293,5 @@ def logout():
     return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=config['web']['port'])
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
