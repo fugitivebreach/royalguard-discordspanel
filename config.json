@@ -1,33 +1,5 @@
 {
-  "servers": [
-    {
-      "id": "1371945471207018497",
-      "name": "Royal Guard Server",
-      "icon": null,
-      "invite_code": "YOUR_INVITE_CODE"
-    },
-    {
-      "id": "1401882370214334555", 
-      "name": "ABA Server",
-      "icon": null,
-      "invite_code": "YOUR_INVITE_CODE"
-    },
-    {
-      "id": "1409650732461850646",
-      "name": "PBA Corps of Royal Engineers", 
-      "icon": null,
-      "invite_code": "YOUR_INVITE_CODE"
-    }
-  ],
-  "discord": {
-    "client_id": "1379433058234798110",
-    "client_secret": "YvxnUIlmxNgbaDc1_1TjVnnNtc08Ydz_",
-    "redirect_uri": "https://royal-guard-discordpanel.railway.app/callback",
-    "bot_token": "MTM3OTQzMzA1ODIzNDc5ODExMA.GJY-_W.ijp_WRRLKnAgdFxqLWq7qJDLJx0rVjVKFkS340"
-  },
   "web": {
-    "secret_key": "ROYALGUARD-DISCORDSPANEL-V1",
-    "port": 5000,
-    "url": "https://royal-guard-discordpanel.railway.app"
+    "port": 5000
   }
 }

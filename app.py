@@ -4,12 +4,46 @@ import json
 import os
 from urllib.parse import urlencode
 import secrets
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
-# Load configuration
-with open('config.json', 'r') as f:
-    config = json.load(f)
+# Load configuration from environment variables
+config = {
+    'discord': {
+        'client_id': os.getenv('DISCORD_CLIENT_ID'),
+        'client_secret': os.getenv('DISCORD_CLIENT_SECRET'),
+        'bot_token': os.getenv('DISCORD_BOT_TOKEN'),
+        'redirect_uri': os.getenv('REDIRECT_URI', 'http://localhost:5000/callback')
+    },
+    'web': {
+        'secret_key': os.getenv('WEB_SECRET_KEY', 'dev-secret-key'),
+        'port': int(os.getenv('PORT', 5000)),
+        'url': os.getenv('WEB_URL', 'http://localhost:5000')
+    }
+}
+
+# Parse server configuration from environment variables
+def load_servers_from_env():
+    server_ids = os.getenv('SERVER_IDS', '').split(',')
+    server_names = os.getenv('SERVER_NAMES', '').split(',')
+    server_invite_codes = os.getenv('SERVER_INVITE_CODES', '').split(',')
+    
+    servers = []
+    for i, server_id in enumerate(server_ids):
+        if server_id.strip():
+            servers.append({
+                'id': server_id.strip(),
+                'name': server_names[i].strip() if i < len(server_names) else f'Server {i+1}',
+                'icon': None,
+                'invite_code': server_invite_codes[i].strip() if i < len(server_invite_codes) else None
+            })
+    return servers
+
+config['servers'] = load_servers_from_env()
 
 app.secret_key = config['web']['secret_key']
 
