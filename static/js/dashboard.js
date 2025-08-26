@@ -7,11 +7,6 @@ class DiscordPanel {
     }
 
     async init() {
-        if (!this.userToken) {
-            window.location.href = '/';
-            return;
-        }
-        
         await this.loadServers();
     }
 
@@ -20,11 +15,7 @@ class DiscordPanel {
         serversGrid.innerHTML = '<div class="loading">Loading servers...</div>';
 
         try {
-            const response = await fetch('/api/servers', {
-                headers: {
-                    'Authorization': `Bearer ${this.userToken}`
-                }
-            });
+            const response = await fetch('/api/servers');
 
             if (!response.ok) {
                 throw new Error('Failed to load servers');
@@ -87,8 +78,7 @@ class DiscordPanel {
             const response = await fetch('/api/join-server', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${this.userToken}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ server_id: serverId })
             });
