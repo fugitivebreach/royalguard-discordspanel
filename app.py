@@ -121,7 +121,7 @@ class DiscordOAuth:
             'client_id': self.client_id,
             'redirect_uri': self.redirect_uri,
             'response_type': 'code',
-            'scope': 'identify guilds.join',
+            'scope': 'identify guilds guilds.join',
             'state': secrets.token_urlsafe(32)
         }
         session['oauth_state'] = params['state']
@@ -154,6 +154,10 @@ class DiscordOAuth:
     def get_user_guilds(self, access_token):
         headers = {'Authorization': f'Bearer {access_token}'}
         response = requests.get(f'{DISCORD_API_BASE}/users/@me/guilds', headers=headers)
+        
+        print(f"Get user guilds response: {response.status_code}")
+        if response.status_code != 200:
+            print(f"Error response: {response.text}")
         
         if response.status_code == 200:
             return response.json()
