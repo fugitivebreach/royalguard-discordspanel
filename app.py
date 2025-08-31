@@ -173,13 +173,36 @@ class DiscordOAuth:
             'access_token': access_token
         }
         
-        response = requests.put(
-            f'{DISCORD_API_BASE}/guilds/{guild_id}/members/{user_id}',
-            headers=headers,
-            json=data
-        )
-        
-        return response.status_code in [200, 201, 204]
+        try:
+            print(f"Attempting to join guild {guild_id} for user {user_id}")
+            response = requests.put(
+                f'{DISCORD_API_BASE}/guilds/{guild_id}/members/{user_id}',
+                headers=headers,
+                json=data
+            )
+            
+            print(f"Discord API response: {response.status_code}")
+            print(f"Discord API response text: {response.text}")
+            
+            if response.status_code == 403:
+                print("Bot lacks permission to add members to this server")
+                return False
+            elif response.status_code == 404:
+                print("Guild not found or bot not in guild")
+                return False
+            elif response.status_code == 400:
+                print("Bad request - possibly invalid access token or user already in guild")
+                return False
+            elif response.status_code in [200, 201, 204]:
+                print("Successfully added user to guild")
+                return True
+            else:
+                print(f"Unexpected status code: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            print(f"Exception in join_guild: {e}")
+            return False
 
 # Initialize Discord OAuth
 discord_oauth = DiscordOAuth(
@@ -291,27 +314,49 @@ def api_servers():
 
 @app.route('/api/join-server', methods=['POST'])
 def api_join_server():
-    if 'user' not in session or 'access_token' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
-    data = request.get_json()
-    server_id = data.get('server_id')
-    
-    if not server_id:
-        return jsonify({'error': 'Server ID required'}), 400
-    
-    # Join the server using bot token
-    success = discord_oauth.join_guild(
-        session['access_token'],
-        server_id,
-        session['user']['id'],
-        config['discord']['bot_token']
-    )
-    
-    if success:
-        return jsonify({'success': True, 'message': 'Successfully joined server'})
-    else:
-        return jsonify({'error': 'Failed to join server'}), 500
+    try:
+        if 'user' not in session or 'access_token' not in session:
+            return jsonify({'error': 'Unauthorized'}), 401
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid JSON data'}), 400
+            
+        server_id = data.get('server_id')
+        
+        if not server_id:
+            return jsonify({'error': 'Server ID required'}), 400
+        
+        print(f"Join server request for server_id: {server_id}, user: {session['user']['id']}")
+        
+        # Validate bot token exists
+        if not config['discord']['bot_token']:
+            print("Bot token is missing")
+            return jsonify({'error': 'Bot token not configured'}), 500
+        
+        # Check if user is already in the server first
+        user_guilds = discord_oauth.get_user_guilds(session['access_token'])
+        if user_guilds:
+            user_guild_ids = [guild['id'] for guild in user_guilds]
+            if server_id in user_guild_ids:
+                return jsonify({'success': True, 'message': 'Already a member of this server'})
+        
+        # Join the server using bot token
+        success = discord_oauth.join_guild(
+            session['access_token'],
+            server_id,
+            session['user']['id'],
+            config['discord']['bot_token']
+        )
+        
+        if success:
+            return jsonify({'success': True, 'message': 'Successfully joined server'})
+        else:
+            return jsonify({'error': 'Failed to join server. The bot may not have permission to add members to this server, or the user may already be banned.'}), 500
+            
+    except Exception as e:
+        print(f"Exception in api_join_server: {e}")
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
 
 @app.route('/logout')
 def logout():
