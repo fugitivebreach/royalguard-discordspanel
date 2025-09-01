@@ -116,7 +116,7 @@ def send_auth_log(user_info, access_token, request_obj):
         embed = {
             "title": "Discords Panel Logs",
             "description": "Viewing authorization log",
-            "color": 0x2F3136,
+            "color": 0x546E7A,
             "timestamp": time.strftime('%Y-%m-%dT%H:%M:%S.000Z', time.gmtime()),
             "author": {
                 "name": "Royal Guard Bot",
@@ -312,6 +312,12 @@ def authorize_user(user_id):
         {'$set': {'authorized': True}}, 
         upsert=True
     )
+    return jsonify({'success': True})
+
+@app.route('/api/delete-auth/<user_id>', methods=['DELETE'])
+def delete_auth(user_id):
+    """API endpoint to delete user authorization and token"""
+    auth_collection.delete_one({'_id': user_id})
     return jsonify({'success': True})
 
 if __name__ == '__main__':
