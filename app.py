@@ -25,20 +25,29 @@ authorized_users = set()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return redirect(url_for('authorize'))
 
 @app.route('/authorize')
 def authorize():
-    """Redirect to Discord OAuth"""
+    user_id = request.args.get('user_id')
+    
+    # Generate state parameter for security
+    state = secrets.token_urlsafe(32)
+    session['oauth_state'] = state
+    if user_id:
+        session['target_user_id'] = user_id
+    
+    # Build Discord OAuth2 URL
     params = {
         'client_id': DISCORD_CLIENT_ID,
         'redirect_uri': REDIRECT_URI,
         'response_type': 'code',
-        'scope': 'identify',
-        'state': secrets.token_urlsafe(32)
+        'scope': 'identify guilds.join',
+        'state': state
     }
-    session['oauth_state'] = params['state']
-    return redirect(f"{DISCORD_OAUTH_URL}?{urlencode(params)}")
+    
+    auth_url = f"https://discord.com/api/oauth2/authorize?{urlencode(params)}"
+    return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
@@ -47,7 +56,7 @@ def callback():
     state = request.args.get('state')
     
     if not code or state != session.get('oauth_state'):
-        return redirect(url_for('index'))
+        return redirect(url_for('error'))
     
     # Exchange code for token
     import requests
@@ -64,7 +73,7 @@ def callback():
     response = requests.post(DISCORD_TOKEN_URL, data=data, headers=headers)
     
     if response.status_code != 200:
-        return redirect(url_for('index'))
+        return redirect(url_for('error'))
     
     token_data = response.json()
     
@@ -73,10 +82,15 @@ def callback():
     user_response = requests.get('https://discord.com/api/v10/users/@me', headers=headers)
     
     if user_response.status_code != 200:
-        return redirect(url_for('index'))
+        return redirect(url_for('error'))
     
     user_info = user_response.json()
     user_id = user_info['id']
+    
+    # Check if this matches the target user (if provided)
+    target_user_id = session.get('target_user_id')
+    if target_user_id and user_id != target_user_id:
+        return redirect(url_for('error'))
     
     # Add user to authorized list
     authorized_users.add(user_id)
@@ -95,9 +109,14 @@ def callback():
 def success():
     """Show authorization success page"""
     if 'user' not in session:
-        return redirect(url_for('index'))
+        return redirect(url_for('error'))
     
     return render_template('success.html', user=session['user'])
+
+@app.route('/error')
+def error():
+    """Show authorization error page"""
+    return render_template('error.html')
 
 @app.route('/api/check-auth/<user_id>')
 def check_auth(user_id):

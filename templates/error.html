@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authorization Error - Royal Guard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #5865f2;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(88, 101, 242, 0.3);
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #5865f2, #7289da);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #5865f2;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #b9bbbe;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+
+        .error-message {
+            background: rgba(237, 66, 69, 0.1);
+            border: 1px solid #ed4245;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #ed4245;
+        }
+
+        .error-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .error-description {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+
+        .retry-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #5865f2, #4752c4);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .retry-button:hover {
+            background: linear-gradient(135deg, #4752c4, #3c45a5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(88, 101, 242, 0.4);
+        }
+
+        .help-text {
+            margin-top: 30px;
+            color: #b9bbbe;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">RG</div>
+        <h1>Royal Guard</h1>
+        <p class="subtitle">Authorization Error</p>
+        
+        <div class="error-message">
+            <div class="error-title">Authorization Failed</div>
+            <div class="error-description">
+                There was an error during the authorization process. This could be due to:
+                <br><br>
+                • Invalid authorization code
+                <br>
+                • Session timeout
+                <br>
+                • User mismatch
+                <br>
+                • Network connectivity issues
+            </div>
+        </div>
+        
+        <a href="javascript:window.close()" class="retry-button">Close Window</a>
+        
+        <div class="help-text">
+            Please try clicking the "Discords Panel" button again in Discord to restart the authorization process.
+        </div>
+    </div>
+</body>
+</html>
