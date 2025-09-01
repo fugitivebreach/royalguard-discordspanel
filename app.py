@@ -3,6 +3,9 @@ import os
 import secrets
 from urllib.parse import urlencode
 from dotenv import load_dotenv
+import motor.motor_asyncio
+import asyncio
+from decouple import config
 
 # Load environment variables
 load_dotenv('.env')
@@ -25,9 +28,11 @@ print(f"🔧 [DEBUG] REDIRECT_URI: {REDIRECT_URI}")
 DISCORD_OAUTH_URL = 'https://discord.com/api/oauth2/authorize'
 DISCORD_TOKEN_URL = 'https://discord.com/api/oauth2/token'
 
-# Store authorized users and their tokens (in production, use a database)
-authorized_users = set()
-user_tokens = {}
+# MongoDB connection
+mongo_url = config('MONGO_URI')
+mongo_client = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
+db = mongo_client['royalguard']
+auth_collection = db['discord_auth']
 
 @app.route('/')
 def index():
@@ -112,10 +117,22 @@ def callback():
         print(f"❌ [DEBUG] User mismatch - expected {target_user_id}, got {user_id}")
         return redirect(url_for('error'))
     
-    # Add user to authorized list and store access token
-    authorized_users.add(user_id)
-    user_tokens[user_id] = token_data['access_token']
-    print(f"✅ [DEBUG] User {user_id} added to authorized list with token stored")
+    # Add user to authorized list and store access token in MongoDB
+    auth_data = {
+        '_id': user_id,
+        'access_token': token_data['access_token'],
+        'authorized': True,
+        'username': user_info['username']
+    }
+    
+    # Use asyncio to run the async MongoDB operation
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(auth_collection.replace_one({'_id': user_id}, auth_data, upsert=True))
+        print(f"✅ [DEBUG] User {user_id} added to MongoDB with token stored")
+    finally:
+        loop.close()
     
     # Store user data in session
     session['user'] = {
@@ -144,25 +161,48 @@ def error():
 @app.route('/api/check-auth/<user_id>')
 def check_auth(user_id):
     """API endpoint to check if user is authorized and has valid token"""
-    is_authorized = user_id in authorized_users
-    has_valid_token = user_id in user_tokens
-    return jsonify({
-        'authorized': is_authorized and has_valid_token,
-        'has_valid_token': has_valid_token
-    })
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        user_data = loop.run_until_complete(auth_collection.find_one({'_id': user_id}))
+        if user_data:
+            is_authorized = user_data.get('authorized', False)
+            has_valid_token = bool(user_data.get('access_token'))
+            return jsonify({
+                'authorized': is_authorized and has_valid_token,
+                'has_valid_token': has_valid_token
+            })
+        return jsonify({'authorized': False, 'has_valid_token': False})
+    finally:
+        loop.close()
 
 @app.route('/api/get-user-token/<user_id>')
 def get_user_token(user_id):
     """API endpoint to get user's access token"""
-    if user_id in user_tokens:
-        return jsonify({'access_token': user_tokens[user_id]})
-    return jsonify({'error': 'No token found'}), 404
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        user_data = loop.run_until_complete(auth_collection.find_one({'_id': user_id}))
+        if user_data and user_data.get('access_token'):
+            return jsonify({'access_token': user_data['access_token']})
+        return jsonify({'error': 'No token found'}), 404
+    finally:
+        loop.close()
 
 @app.route('/api/authorize-user/<user_id>', methods=['POST'])
 def authorize_user(user_id):
     """API endpoint to authorize a user"""
-    authorized_users.add(user_id)
-    return jsonify({'success': True})
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(auth_collection.update_one(
+            {'_id': user_id}, 
+            {'$set': {'authorized': True}}, 
+            upsert=True
+        ))
+        return jsonify({'success': True})
+    finally:
+        loop.close()
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
