@@ -3,8 +3,7 @@ import os
 import secrets
 from urllib.parse import urlencode
 from dotenv import load_dotenv
-import motor.motor_asyncio
-import asyncio
+import pymongo
 from decouple import config
 
 # Load environment variables
@@ -30,7 +29,7 @@ DISCORD_TOKEN_URL = 'https://discord.com/api/oauth2/token'
 
 # MongoDB connection
 mongo_url = config('MONGO_URI')
-mongo_client = motor.motor_asyncio.AsyncIOMotorClient(str(mongo_url))
+mongo_client = pymongo.MongoClient(str(mongo_url))
 db = mongo_client['royalguard']
 auth_collection = db['discord_auth']
 
@@ -125,14 +124,9 @@ def callback():
         'username': user_info['username']
     }
     
-    # Use asyncio to run the async MongoDB operation
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(auth_collection.replace_one({'_id': user_id}, auth_data, upsert=True))
-        print(f"✅ [DEBUG] User {user_id} added to MongoDB with token stored")
-    finally:
-        loop.close()
+    # Use synchronous MongoDB operation
+    auth_collection.replace_one({'_id': user_id}, auth_data, upsert=True)
+    print(f"✅ [DEBUG] User {user_id} added to MongoDB with token stored")
     
     # Store user data in session
     session['user'] = {
@@ -161,48 +155,33 @@ def error():
 @app.route('/api/check-auth/<user_id>')
 def check_auth(user_id):
     """API endpoint to check if user is authorized and has valid token"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        user_data = loop.run_until_complete(auth_collection.find_one({'_id': user_id}))
-        if user_data:
-            is_authorized = user_data.get('authorized', False)
-            has_valid_token = bool(user_data.get('access_token'))
-            return jsonify({
-                'authorized': is_authorized and has_valid_token,
-                'has_valid_token': has_valid_token
-            })
-        return jsonify({'authorized': False, 'has_valid_token': False})
-    finally:
-        loop.close()
+    user_data = auth_collection.find_one({'_id': user_id})
+    if user_data:
+        is_authorized = user_data.get('authorized', False)
+        has_valid_token = bool(user_data.get('access_token'))
+        return jsonify({
+            'authorized': is_authorized and has_valid_token,
+            'has_valid_token': has_valid_token
+        })
+    return jsonify({'authorized': False, 'has_valid_token': False})
 
 @app.route('/api/get-user-token/<user_id>')
 def get_user_token(user_id):
     """API endpoint to get user's access token"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        user_data = loop.run_until_complete(auth_collection.find_one({'_id': user_id}))
-        if user_data and user_data.get('access_token'):
-            return jsonify({'access_token': user_data['access_token']})
-        return jsonify({'error': 'No token found'}), 404
-    finally:
-        loop.close()
+    user_data = auth_collection.find_one({'_id': user_id})
+    if user_data and user_data.get('access_token'):
+        return jsonify({'access_token': user_data['access_token']})
+    return jsonify({'error': 'No token found'}), 404
 
 @app.route('/api/authorize-user/<user_id>', methods=['POST'])
 def authorize_user(user_id):
     """API endpoint to authorize a user"""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(auth_collection.update_one(
-            {'_id': user_id}, 
-            {'$set': {'authorized': True}}, 
-            upsert=True
-        ))
-        return jsonify({'success': True})
-    finally:
-        loop.close()
+    auth_collection.update_one(
+        {'_id': user_id}, 
+        {'$set': {'authorized': True}}, 
+        upsert=True
+    )
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
