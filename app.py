@@ -16,12 +16,18 @@ DISCORD_CLIENT_SECRET = os.getenv('DISCORD_CLIENT_SECRET')
 DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 REDIRECT_URI = os.getenv('REDIRECT_URI')
 
+# Debug environment variables
+print(f"🔧 [DEBUG] DISCORD_CLIENT_ID: {DISCORD_CLIENT_ID[:10] if DISCORD_CLIENT_ID else 'None'}...")
+print(f"🔧 [DEBUG] DISCORD_CLIENT_SECRET: {'***' if DISCORD_CLIENT_SECRET else 'None'}")
+print(f"🔧 [DEBUG] REDIRECT_URI: {REDIRECT_URI}")
+
 # Discord OAuth2 URLs
 DISCORD_OAUTH_URL = 'https://discord.com/api/oauth2/authorize'
 DISCORD_TOKEN_URL = 'https://discord.com/api/oauth2/token'
 
-# Store authorized users (in production, use a database)
+# Store authorized users and their tokens (in production, use a database)
 authorized_users = set()
+user_tokens = {}
 
 @app.route('/')
 def index():
@@ -106,9 +112,10 @@ def callback():
         print(f"❌ [DEBUG] User mismatch - expected {target_user_id}, got {user_id}")
         return redirect(url_for('error'))
     
-    # Add user to authorized list
+    # Add user to authorized list and store access token
     authorized_users.add(user_id)
-    print(f"✅ [DEBUG] User {user_id} added to authorized list")
+    user_tokens[user_id] = token_data['access_token']
+    print(f"✅ [DEBUG] User {user_id} added to authorized list with token stored")
     
     # Store user data in session
     session['user'] = {
@@ -136,8 +143,20 @@ def error():
 
 @app.route('/api/check-auth/<user_id>')
 def check_auth(user_id):
-    """API endpoint to check if user is authorized"""
-    return jsonify({'authorized': user_id in authorized_users})
+    """API endpoint to check if user is authorized and has valid token"""
+    is_authorized = user_id in authorized_users
+    has_valid_token = user_id in user_tokens
+    return jsonify({
+        'authorized': is_authorized and has_valid_token,
+        'has_valid_token': has_valid_token
+    })
+
+@app.route('/api/get-user-token/<user_id>')
+def get_user_token(user_id):
+    """API endpoint to get user's access token"""
+    if user_id in user_tokens:
+        return jsonify({'access_token': user_tokens[user_id]})
+    return jsonify({'error': 'No token found'}), 404
 
 @app.route('/api/authorize-user/<user_id>', methods=['POST'])
 def authorize_user(user_id):
