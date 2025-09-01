@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Guard - Authorization Successful</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #000000;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .container {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 8px 32px 0 rgba(88, 101, 242, 0.3);
+            border: 2px solid #5865f2;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #5865f2;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            border: 2px solid #5865f2;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #5865f2;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #b9bbbe;
+        }
+
+        .user-info {
+            background: #2f3136;
+            border: 2px solid #5865f2;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid #5865f2;
+        }
+
+        .user-details h3 {
+            margin-bottom: 5px;
+            font-size: 1.3rem;
+            color: #ffffff;
+        }
+
+        .user-details p {
+            color: #b9bbbe;
+            font-size: 0.9rem;
+        }
+
+        .description {
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #dcddde;
+        }
+
+        .next-steps {
+            background: #2f3136;
+            border: 2px solid #5865f2;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .next-steps h3 {
+            margin-bottom: 15px;
+            color: #5865f2;
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            color: #dcddde;
+        }
+
+        .step-number {
+            background: #5865f2;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            border: 1px solid #5865f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1>Authorization Successful!</h1>
+        <p class="subtitle">You're all set to use the Discord Panel</p>
+        
+        <div class="user-info">
+            <img src="{{ user.avatar }}" alt="Avatar" class="user-avatar">
+            <div class="user-details">
+                <h3>{{ user.username }}{% if user.discriminator != '0' %}#{{ user.discriminator }}{% endif %}</h3>
+                <p>Successfully authorized</p>
+            </div>
+        </div>
+        
+        <p class="description">
+            Your Discord account has been successfully authorized to access the Royal Guard Discord Panel. 
+            You can now use the Discord bot commands to join available servers.
+        </p>
+        
+        <div class="next-steps">
+            <h3>What's Next?</h3>
+            <div class="step">
+                <div class="step-number">1</div>
+                <span>Go back to Discord and click the <strong>Discords Panel</strong> button</span>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <span>Select the servers you want to join from the dropdown menu</span>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <span>Enjoy access to the Royal Guard community servers!</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
